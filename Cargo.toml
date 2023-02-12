@@ -9,3 +9,8 @@ edition = "2021"
 [dependencies]
 dialoguer = "0.10.3"
 rand = "0.8.5"
+
+# Delay function
+futures = "0.3.25"
+settimeout = "0.1.1"
+eventual = "0.1.6"
