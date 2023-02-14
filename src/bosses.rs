@@ -1,5 +1,7 @@
 pub mod boos_registry {
 
+    static mut A: u8 = 12;
+
     pub struct Boss<'a> {
         pub name: &'a str,
         pub health: u32,

@@ -1,27 +1,28 @@
 mod bosses;
-mod char_info;
+mod player;
+
+use crate::player::Player::{self, PlayerInfo};
+
 use bosses::boos_registry;
-use char_info::getters;
 use dialoguer::{console::Term, theme::ColorfulTheme, Select};
 use rand::Rng;
 use std::io;
 use std::time::Duration;
 use std::{thread, time};
 
+use crate::bosses::boos_registry::ALL_BOSSES;
+
 fn main() -> std::io::Result<()> {
-    // Player info
-    #[derive(Debug)]
-    struct Player {
-        name: String,
-        health: u32,
-        min_hit: u32,
-        max_hit: u32,
-        crit_chance: u32, // unsafe
-        money: u32,
-        deaths: u32,
+    clear_console();
+    // Utility functions
+    fn clear_console() {
+        // clears and put it to the first line
+        print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
+        // print!("{}[2J", 27 as char); => clear the terminal too
     }
 
-    let mut player = Player {
+    // Creates an instance of Player struct
+    let mut player = Player::PlayerInfo {
         name: String::new(),
         health: 100,
         min_hit: 10,
@@ -29,74 +30,159 @@ fn main() -> std::io::Result<()> {
         crit_chance: 1,
         money: 0,
         deaths: 0,
+        boss_kills: 0,
+        current_boss: 0,
+        money_earned: 0,
+        highest_boss: 1,
     };
 
-    impl Player {
-        fn hit(&self) -> u32 {
-            fn crit_calc(player: &Player) -> bool {
-                let mut rng = rand::thread_rng();
-                let x: u32 = rng.gen();
-                let number = x % 100;
+    // Prompts the user to chose a name
+    println!("Please type a name for your character");
+    io::stdin()
+        .read_line(&mut player.name)
+        .expect("Invalid name");
 
-                if number <= player.crit_chance {
-                    true
-                } else {
-                    false
+    let name_lenght = player.name.len();
+    player.name.truncate(name_lenght - 1);
+
+    clear_console();
+    println!("\n Welcome to the game {}! \n", player.name);
+
+    start_selection(&mut player);
+
+    // Merchant
+    fn merchant(player: &mut PlayerInfo) {
+        clear_console();
+
+        println!("Welcome stranger! \n");
+        println!("Your balance is {}", player.money);
+        struct item_details<'a> {
+            name: &'a str,
+            description: &'a str,
+            price: u32,
+            is_available: bool,
+            is_bought: bool,
+        }
+        // let health_items = vec![""]
+        let store_items = vec!["Health", "Firepower", "Defence", "Exit"];
+
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .items(&store_items)
+            .default(0)
+            .interact_on_opt(&Term::stderr());
+
+        match selection {
+            Ok(opt) => match opt {
+                Some(index) => {
+                    if index == 0 {
+                        println!("Health");
+                        merchant(player);
+                    } else if index == 1 {
+                        println!("Firepower");
+                        merchant(player);
+                    } else if index == 2 {
+                        println!("Defence");
+                        merchant(player);
+                    } else if index == 3 {
+                        clear_console();
+                    }
                 }
-            }
+                None => {
+                    clear_console();
+                }
+            },
 
-            let mut rng = rand::thread_rng();
-            let rand_num: u32 = rng.gen();
-
-            let hit_calc = rand_num % (self.max_hit + 1);
-            let hit_damage = if hit_calc < self.min_hit {
-                self.min_hit
-            } else {
-                hit_calc
-            };
-
-            let crit_status = crit_calc(&self);
-
-            if crit_status {
-                hit_damage * 2
-            } else {
-                hit_damage
+            Err(err) => {
+                eprintln!("Error in merchant items. {}", err)
             }
         }
     }
 
-    // println!("Please type a name for your character");
-    // io::stdin()
-    //     .read_line(&mut player.name)
-    //     .expect("Invalid name");
-    // println!("Your name is {}", player.name);
-    // println!("Player stats {:#?}", player);
+    fn health_items() {
+        clear_console();
+        todo!();
+    }
 
-    // let items = vec!["Item 1", "item 2", "item 3"];
-    // let selection = Select::with_theme(&ColorfulTheme::default())
-    //     .items(&items)
-    //     .default(0)
-    //     .interact_on_opt(&Term::stderr())?;
+    fn fire_power_items() {
+        clear_console();
+        todo!();
+    }
 
-    // match selection {
-    //     Some(index) => {
-    //         if index == 0 {
-    //             println!("primeira")
-    //         } else if index == 1 {
-    //             println!("sec")
-    //         } else {
-    //             println!("ter")
-    //         }
-    //     }
-    //     None => println!("User did not select anything"),
-    // }
+    fn defence_items() {
+        clear_console();
+        todo!();
+    }
+
+    // Start Selection
+    fn start_selection(player: &mut PlayerInfo) {
+        clear_console();
+
+        let items = vec![
+            "Start Game",
+            "Progress",
+            "Merchant",
+            "Player Info",
+            "Bosses Info",
+            "Exit",
+        ];
+
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .items(&items)
+            .default(0)
+            .interact_on_opt(&Term::stderr());
+
+        match selection {
+            Ok(opt) => match opt {
+                Some(index) => {
+                    if index == 0 {
+                        // Start Game
+                        start_new_battle(player);
+                    } else if index == 1 {
+                        // Progress
+                        println!("Story progress: {:.2}", player.get_story_progess());
+                        thread::sleep(Duration::from_millis(500));
+
+                        println!("Bosses Killed: {}", player.boss_kills);
+                        thread::sleep(Duration::from_millis(500));
+
+                        println!("Current Boss: {}", player.current_boss);
+                        thread::sleep(Duration::from_millis(500));
+
+                        println!("Total money earned: {}", player.money_earned);
+                        thread::sleep(Duration::from_millis(500));
+
+                        println!("Current balance {} \n \n", player.money);
+                        thread::sleep(Duration::from_millis(100));
+
+                        start_selection(player);
+                    } else if index == 2 {
+                        // Merchant
+                        clear_console();
+                        println!("Welcome to the Merchant \n");
+                        merchant(player)
+                    } else if index == 3 {
+                        // Player info
+                        println!("Player stats {:#?}", player);
+                        thread::sleep(Duration::from_secs(1));
+                    } else if index == 4 {
+                        // Bosses Info
+                        println!("Boss info")
+                    } else {
+                        println!("Till the next time!")
+                    }
+                }
+                None => println!("User did not select anything"),
+            },
+            Err(err) => eprint!("This is an error {}", err),
+        }
+    }
 
     //fight simulation
 
     // Time between hits
 
     // Boss related info
-    fn start_new_battle(player: &mut Player) {
+    fn start_new_battle(player: &mut Player::PlayerInfo) {
         // Delay Amounts
         fn set_delay(mil_sec: u64) -> Duration {
             time::Duration::from_millis(mil_sec)
@@ -179,7 +265,7 @@ fn main() -> std::io::Result<()> {
                     "Boss is now dead! Killed with {} hits. Player balance is now {:.2} \n",
                     player_hit_counter, player_balance
                 );
-                thread::sleep(set_delay(3));
+                thread::sleep(set_delay(300));
                 current_boss += 1;
                 println!(
                     "Next boss is now {}. Name: {}",
@@ -211,7 +297,7 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    start_new_battle(&mut player);
+    // start_new_battle(&mut player);
 
     fn player_hit() -> u32 {
         let mut rng = rand::thread_rng();
@@ -234,8 +320,6 @@ fn main() -> std::io::Result<()> {
         let defence_number = total_range % 100;
         defence_number <= chance
     }
-
-    // getters::get_test();
 
     Ok(())
 }
