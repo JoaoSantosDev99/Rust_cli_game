@@ -6,8 +6,8 @@ use crate::player::Player::{self, PlayerInfo};
 use bosses::boos_registry;
 use dialoguer::{console::Term, theme::ColorfulTheme, Select};
 use rand::Rng;
-use std::io;
 use std::time::Duration;
+use std::{fmt, io};
 use std::{thread, time};
 
 use crate::bosses::boos_registry::ALL_BOSSES;
@@ -50,19 +50,34 @@ fn main() -> std::io::Result<()> {
 
     start_selection(&mut player);
 
+    // Store Items Type
+    #[derive(Debug)]
+    struct ItemDetails<'a> {
+        name: &'a str,
+        description: &'a str,
+        price: u32,
+        is_available: bool,
+        is_bought: bool,
+        unlock_requirement: &'a str,
+    }
+
+    impl fmt::Display for ItemDetails<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "{}          Price:${}\n({})\n\n available:{}    acquired:{}\n\n\n",
+                self.name, self.price, self.description, self.is_available, self.is_bought
+            )
+        }
+    }
+
     // Merchant
     fn merchant(player: &mut PlayerInfo) {
         clear_console();
 
         println!("Welcome stranger! \n");
         println!("Your balance is {}", player.money);
-        struct item_details<'a> {
-            name: &'a str,
-            description: &'a str,
-            price: u32,
-            is_available: bool,
-            is_bought: bool,
-        }
+
         // let health_items = vec![""]
         let store_items = vec!["Health", "Firepower", "Defence", "Exit"];
 
@@ -75,8 +90,7 @@ fn main() -> std::io::Result<()> {
             Ok(opt) => match opt {
                 Some(index) => {
                     if index == 0 {
-                        println!("Health");
-                        merchant(player);
+                        health_items(player)
                     } else if index == 1 {
                         println!("Firepower");
                         merchant(player);
@@ -98,9 +112,82 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    fn health_items() {
+    fn health_items(player: &mut PlayerInfo) {
         clear_console();
-        todo!();
+        println!("Health Items \n");
+        println!("Press {} to ruturn \n", String::from("esc"));
+
+        let health_items_vec = vec![
+            ItemDetails {
+                name: "HP Upgrade 1",
+                description: "Increase your health by 100 points",
+                is_available: true,
+                unlock_requirement: "",
+                is_bought: false,
+                price: 100,
+            },
+            ItemDetails {
+                name: "HP Upgrade 2",
+                description: "Increase your health by 200 points",
+                is_available: false,
+                unlock_requirement: "You need to get to the third boss",
+                is_bought: false,
+                price: 100,
+            },
+            ItemDetails {
+                name: "HP Upgrade 3",
+                description: "Increase your health by 200 points",
+                is_available: false,
+                unlock_requirement: "You need to get to the fourth boss",
+                is_bought: false,
+                price: 300,
+            },
+        ];
+
+        let health_selection = Select::with_theme(&ColorfulTheme::default())
+            .items(&health_items_vec)
+            .default(0)
+            .interact_on_opt(&Term::stderr());
+
+        match health_selection {
+            Ok(opt) => match opt {
+                Some(index) => {
+                    if index == 0 {
+                        if health_items_vec[1].is_available {
+                        } else {
+                            println!(
+                                "Item is not available, {}",
+                                health_items_vec[1].unlock_requirement
+                            );
+                        }
+
+                        thread::sleep(Duration::from_millis(500));
+                        health_items(player);
+                    } else if index == 1 {
+                        if health_items_vec[1].is_available {
+                        } else {
+                            println!("Returning...\n");
+                            println!(
+                                "Item is not available, {}",
+                                health_items_vec[1].unlock_requirement
+                            );
+                        }
+
+                        thread::sleep(Duration::from_millis(4500));
+                        health_items(player);
+                        println!("Firepower");
+                    } else {
+                        merchant(player);
+                    }
+                }
+                None => {
+                    merchant(player);
+                }
+            },
+            Err(err) => {
+                eprintln!("{}", err)
+            }
+        }
     }
 
     fn fire_power_items() {
