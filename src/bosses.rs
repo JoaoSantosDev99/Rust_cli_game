@@ -1,7 +1,5 @@
 pub mod boos_registry {
 
-    static mut A: u8 = 12;
-
     pub struct Boss<'a> {
         pub name: &'a str,
         pub health: u32,
@@ -10,6 +8,8 @@ pub mod boos_registry {
         pub def_chance: u32,
         pub reward: u32,
     }
+
+    impl Boss<'_> {}
 
     pub const FIRST_BOSS: Boss = Boss {
         name: "Boss 1",
