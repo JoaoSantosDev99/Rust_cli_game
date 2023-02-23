@@ -1,4 +1,5 @@
 pub mod boos_registry {
+    use rand::Rng;
 
     pub struct Boss<'a> {
         pub name: &'a str,
@@ -41,8 +42,20 @@ pub mod boos_registry {
     pub const ALL_BOSSES: [Boss; 3] = [FIRST_BOSS, SECOND_BOSS, THIRD_BOSS];
 
     impl Boss<'_> {
-        fn get_reward(&self) -> u32 {
-            self.reward
+        pub fn hit(&mut self) -> u32 {
+            let mut rng = rand::thread_rng();
+
+            //return
+            rng.gen_range(self.min_hit..=self.max_hit)
+        }
+
+        pub fn has_defended(self) -> bool {
+            let mut rng = rand::thread_rng();
+            let x: u32 = rng.gen_range(1..=100);
+
+            //return
+            let defended = if x <= self.def_chance { true } else { false };
+            defended
         }
     }
 }

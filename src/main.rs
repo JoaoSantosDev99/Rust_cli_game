@@ -31,7 +31,7 @@ fn main() -> std::io::Result<()> {
         money: 0,
         deaths: 0,
         boss_kills: 0,
-        current_boss: 0,
+        current_boss: 1,
         money_earned: 0,
         highest_boss: 1,
     };
@@ -444,29 +444,30 @@ fn main() -> std::io::Result<()> {
         }
         let delay = time::Duration::from_secs(2);
 
+        let mut boss_array = boos_registry::ALL_BOSSES;
+
         let mut current_boss = 0;
         let mut players_health = 170;
         let mut boss_helth = 250;
         let mut player_hit_counter = 0;
         let mut boss_hit_counter = 0;
-        let mut player_balance: f64;
 
         // Battle
         loop {
-            let boss_array = boos_registry::ALL_BOSSES;
-
             let player_hit_damage = player.hit();
 
-            let boss_hit_damage = 12;
-            // let test = &boss_array[player.current_boss];
-            let boss_reward: u32 = 10000;
+            let boss_hit_damage = boss_array[player.current_boss as usize].hit();
+            let boss_reward: u32 = boss_array[player.current_boss as usize].reward;
+
+            if player.highest_boss < player.current_boss {
+                player.highest_boss = player.current_boss;
+            };
 
             println!("Player hit: {player_hit_damage}");
             thread::sleep(set_delay(500));
-            if boss_helth > player_hit_damage {
-                player_hit_counter += 1;
 
-                if !has_boss_defended(20) {
+            if boss_helth > player_hit_damage {
+                if boss_array[player.current_boss as u32] {
                     boss_helth -= player_hit_damage;
                     println!("Boss has now {boss_helth}hp \n");
                     thread::sleep(delay);
