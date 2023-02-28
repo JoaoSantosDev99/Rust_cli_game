@@ -1,10 +1,10 @@
-use crate::bosses::boos_registry;
+use crate::bosses::boss_registry;
 use rand::Rng;
 
 pub mod Player {
     use rand::Rng;
 
-    use crate::bosses::boos_registry;
+    use crate::bosses::boss_registry;
 
     #[derive(Debug)]
     pub struct PlayerInfo {
@@ -26,7 +26,7 @@ pub mod Player {
 
     impl PlayerInfo {
         pub fn get_story_progess(&self) -> f32 {
-            let progress = (self.highest_boss / boos_registry::ALL_BOSSES.len() as u32) as f32;
+            let progress = (self.highest_boss / boss_registry::ALL_BOSSES.len() as u32) as f32;
             progress
         }
 
