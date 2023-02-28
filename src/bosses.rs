@@ -13,16 +13,16 @@ pub mod boos_registry {
     impl Boss<'_> {}
 
     pub const FIRST_BOSS: Boss = Boss {
-        name: "Boss 1",
-        health: 200,
-        min_hit: 10,
-        max_hit: 100,
+        name: "Jesse James",
+        health: 100,
+        min_hit: 5,
+        max_hit: 25,
         def_chance: 20,
         reward: 10000,
     };
 
     pub const SECOND_BOSS: Boss = Boss {
-        name: "Boss 2",
+        name: "Billy the Kid",
         health: 400,
         min_hit: 20,
         max_hit: 150,
@@ -31,7 +31,7 @@ pub mod boos_registry {
     };
 
     pub const THIRD_BOSS: Boss = Boss {
-        name: "Boss 3",
+        name: "Buffalo Bill",
         health: 600,
         min_hit: 60,
         max_hit: 260,
@@ -42,14 +42,14 @@ pub mod boos_registry {
     pub const ALL_BOSSES: [Boss; 3] = [FIRST_BOSS, SECOND_BOSS, THIRD_BOSS];
 
     impl Boss<'_> {
-        pub fn hit(&mut self) -> u32 {
+        pub fn hit(&self) -> u32 {
             let mut rng = rand::thread_rng();
 
             //return
             rng.gen_range(self.min_hit..=self.max_hit)
         }
 
-        pub fn has_defended(self) -> bool {
+        pub fn has_defended(&self) -> bool {
             let mut rng = rand::thread_rng();
             let x: u32 = rng.gen_range(1..=100);
 

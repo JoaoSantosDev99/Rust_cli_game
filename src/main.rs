@@ -25,13 +25,13 @@ fn main() -> std::io::Result<()> {
     let mut player = Player::PlayerInfo {
         name: String::new(),
         health: 100,
-        min_hit: 10,
-        max_hit: 40,
+        min_hit: 30,
+        max_hit: 80,
         crit_chance: 1,
         money: 0,
         deaths: 0,
         boss_kills: 0,
-        current_boss: 1,
+        current_boss: 0,
         money_earned: 0,
         highest_boss: 1,
     };
@@ -97,6 +97,7 @@ fn main() -> std::io::Result<()> {
                         defence_items(player);
                     } else if index == 3 {
                         clear_console();
+                        start_selection(player);
                     }
                 }
                 None => {
@@ -417,8 +418,12 @@ fn main() -> std::io::Result<()> {
                         merchant(player)
                     } else if index == 3 {
                         // Player info
+                        clear_console();
+                        println!("Returning to Menu in 10s \n");
                         println!("Player stats {:#?}", player);
-                        thread::sleep(Duration::from_secs(1));
+                        thread::sleep(Duration::from_secs(10));
+                        clear_console();
+                        start_selection(player);
                     } else if index == 4 {
                         // Bosses Info
                         println!("Boss info")
@@ -438,27 +443,39 @@ fn main() -> std::io::Result<()> {
 
     // Boss related info
     fn start_new_battle(player: &mut PlayerInfo) {
+        let boss_array = boos_registry::ALL_BOSSES;
+
         // Delay Amounts
         fn set_delay(mil_sec: u64) -> Duration {
             time::Duration::from_millis(mil_sec)
         }
         let delay = time::Duration::from_secs(2);
 
-        let mut boss_array = boos_registry::ALL_BOSSES;
+        let mut current_boss = player.current_boss;
+        let mut players_health = player.health;
+        let mut boss_health = boss_array[player.current_boss as usize].health; // not safe?
 
-        let mut current_boss = 0;
-        let mut players_health = 170;
-        let mut boss_helth = 250;
+        // Misc.
         let mut player_hit_counter = 0;
         let mut boss_hit_counter = 0;
 
         // Battle
-        loop {
-            let player_hit_damage = player.hit();
+        println!(
+            "Current boss: {} \n",
+            boss_array[player.current_boss as usize].name
+        );
+        thread::sleep(Duration::from_millis(600));
 
-            let boss_hit_damage = boss_array[player.current_boss as usize].hit();
+        loop {
+            thread::sleep(set_delay(1000));
+
+            // Hit function
+            let player_hit_damage = player.hit();
+            let boss_hit_damage = boss_array[current_boss as usize].hit();
+
             let boss_reward: u32 = boss_array[player.current_boss as usize].reward;
 
+            // Update highest boos achieved
             if player.highest_boss < player.current_boss {
                 player.highest_boss = player.current_boss;
             };
@@ -466,19 +483,13 @@ fn main() -> std::io::Result<()> {
             println!("Player hit: {player_hit_damage}");
             thread::sleep(set_delay(500));
 
-            if boss_helth > player_hit_damage {
-                if boss_array[player.current_boss as u32] {
-                    boss_helth -= player_hit_damage;
-                    println!("Boss has now {boss_helth}hp \n");
-                    thread::sleep(delay);
-                } else {
-                    println!("Boss defended a {} git \n", player_hit_damage);
-                    thread::sleep(delay);
-                }
+            if boss_array[current_boss as usize].has_defended() {
+                println!("Boss defended a {} hit \n", player_hit_damage);
+                thread::sleep(delay);
 
-                println!("Boss hit: {boss_hit_damage}");
-                thread::sleep(set_delay(500));
                 if players_health > boss_hit_damage {
+                    println!("Boss hit: {boss_hit_damage}");
+                    thread::sleep(set_delay(500));
                     players_health -= boss_hit_damage;
                     boss_hit_counter += 1;
 
@@ -493,6 +504,7 @@ fn main() -> std::io::Result<()> {
                         );
                         thread::sleep(set_delay(3000));
                         let options = vec!["Next Boss", "Vendor", "Exit"];
+
                         let next_options = Select::with_theme(&ColorfulTheme::default())
                             .items(&options)
                             .default(0)
@@ -502,11 +514,14 @@ fn main() -> std::io::Result<()> {
                             Ok(opt) => match opt {
                                 Some(val) => {
                                     if val == 0 {
-                                        println!("you continued")
+                                        clear_console();
+                                        start_new_battle(player)
                                     } else if val == 1 {
-                                        println!("vendor")
+                                        clear_console();
+                                        merchant(player)
                                     } else {
-                                        println!("Game over")
+                                        clear_console();
+                                        start_selection(player)
                                     }
                                 }
                                 None => {}
@@ -516,67 +531,101 @@ fn main() -> std::io::Result<()> {
                     };
                 }
             } else {
-                player.current_boss += 1;
+                if boss_health > player_hit_damage {
+                    boss_health -= player_hit_damage;
+                    player_hit_counter += 1;
+                    println!("Boss has now {boss_health}hp \n");
+                    thread::sleep(delay);
 
-                println!(
-                    "Boss is now dead! Killed with {} hits. Player balance is now {:.2} \n",
-                    player_hit_counter, player.money
-                );
+                    if players_health > boss_hit_damage {
+                        println!("Boss hit {boss_hit_damage}hp");
+                        players_health -= boss_hit_damage;
+                        boss_hit_counter += 1;
+                        thread::sleep(set_delay(500));
 
-                thread::sleep(set_delay(300));
-                current_boss += 1;
-                println!(
-                    "Next boss is now {}. Name: {}",
-                    current_boss, boss_array[0].name
-                );
+                        println!("Player has now {players_health}hp \n");
+                        thread::sleep(delay);
+                    } else {
+                        break {
+                            println!("Boss hit {boss_hit_damage}hp");
+                            thread::sleep(set_delay(500));
+                            current_boss = 0; // If the play dies, it goes back to the first boss;
+                            println!(
+                                "Player is now dead! Killed with {} hits \n",
+                                boss_hit_counter
+                            );
+                            thread::sleep(set_delay(3000));
+                            let options = vec!["Next Boss", "Vendor", "Exit"];
 
-                let options = vec!["Next Boss", "Vendor", "Exit"];
-                let next_options = Select::with_theme(&ColorfulTheme::default())
-                    .items(&options)
-                    .default(0)
-                    .interact_on_opt(&Term::stderr());
+                            let next_options = Select::with_theme(&ColorfulTheme::default())
+                                .items(&options)
+                                .default(0)
+                                .interact_on_opt(&Term::stderr());
 
-                match next_options {
-                    Ok(opt) => match opt {
-                        Some(val) => {
-                            if val == 0 {
-                                println!("you continued")
-                            } else if val == 1 {
-                                println!("vendor")
-                            } else {
-                                println!("Game over")
+                            match next_options {
+                                Ok(opt) => match opt {
+                                    Some(val) => {
+                                        if val == 0 {
+                                            clear_console();
+                                            start_new_battle(player)
+                                        } else if val == 1 {
+                                            clear_console();
+                                            merchant(player)
+                                        } else {
+                                            clear_console();
+                                            start_selection(player)
+                                        }
+                                    }
+                                    None => {}
+                                },
+                                Err(err) => eprintln!("Erro {err:?}"),
                             }
-                        }
-                        None => {}
-                    },
-                    Err(err) => eprintln!("Erro {err:?}"),
+                        };
+                    }
+                } else {
+                    // Boss death
+                    player.money += boss_reward;
+                    player.money_earned += boss_reward;
+                    player.current_boss += 1;
+
+                    println!(
+                        "Boss is now dead! Killed with {} hits. Player balance is now {:.2} \n",
+                        player_hit_counter, player.money
+                    );
+
+                    thread::sleep(set_delay(300));
+
+                    println!(
+                        "Next boss is now {}.",
+                        boss_array[player.current_boss as usize].name
+                    );
+
+                    let options = vec!["Next Boss", "Vendor", "Exit"];
+                    let next_options = Select::with_theme(&ColorfulTheme::default())
+                        .items(&options)
+                        .default(0)
+                        .interact_on_opt(&Term::stderr());
+
+                    match next_options {
+                        Ok(opt) => match opt {
+                            Some(val) => {
+                                if val == 0 {
+                                    clear_console();
+                                    start_new_battle(player)
+                                } else if val == 1 {
+                                    clear_console();
+                                    merchant(player)
+                                } else {
+                                    clear_console();
+                                }
+                            }
+                            None => {}
+                        },
+                        Err(err) => eprintln!("Erro {err:?}"),
+                    }
                 }
             }
         }
-    }
-
-    // start_new_battle(&mut player);
-
-    fn player_hit() -> u32 {
-        let mut rng = rand::thread_rng();
-        let x: u32 = rng.gen();
-        x % 60 + 10 // 10 to 60 hit points
-    }
-
-    fn boss_hit() -> u32 {
-        let mut rng = rand::thread_rng();
-        let x: u32 = rng.gen();
-        // 0 to 50 hit points
-        let hit = x % 50;
-        let defended = false;
-        x % 50
-    }
-
-    fn has_boss_defended(chance: u32) -> bool {
-        let mut rng = rand::thread_rng();
-        let total_range: u32 = rng.gen();
-        let defence_number = total_range % 100;
-        defence_number <= chance
     }
 
     Ok(())
