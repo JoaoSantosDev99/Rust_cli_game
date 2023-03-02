@@ -1,7 +1,8 @@
 mod bosses;
+mod merchant;
 mod player;
 
-use crate::player::Player::{self, PlayerInfo};
+use crate::player::player::PlayerInfo;
 
 use bosses::{boss_display, boss_registry};
 use dialoguer::{console::Term, theme::ColorfulTheme, Select};
@@ -19,7 +20,7 @@ fn main() -> std::io::Result<()> {
     }
 
     // Creates an instance of Player struct
-    let mut player = Player::PlayerInfo {
+    let mut player = player::player::PlayerInfo {
         name: String::new(),
         health: 100,
         min_hit: 30,
@@ -48,26 +49,6 @@ fn main() -> std::io::Result<()> {
     start_selection(&mut player);
 
     // Store Items Type
-    #[derive(Debug)]
-    struct ItemDetails<'a> {
-        name: &'a str,
-        description: &'a str,
-        price: u32,
-        is_available: bool,
-        is_bought: bool,
-        unlock_requirement: &'a str,
-    }
-
-    impl fmt::Display for ItemDetails<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{}          Price:${}\n({})\n\n available:{}    acquired:{}\n\n\n",
-                self.name, self.price, self.description, self.is_available, self.is_bought
-            )
-        }
-    }
-
     // Start Selection
     fn start_selection(player: &mut PlayerInfo) {
         clear_console();
@@ -114,7 +95,7 @@ fn main() -> std::io::Result<()> {
                         // Merchant
                         clear_console();
                         println!("Welcome to the Merchant \n");
-                        merchant(player)
+                        merchant_selection(player)
                     } else if index == 3 {
                         // Player info
                         clear_console();
@@ -137,15 +118,34 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    // Merchant
-    fn merchant(player: &mut PlayerInfo) {
+    // ---------------------  Merchant  ------------------------------------------------------
+    // Store Items Type
+    #[derive(Debug)]
+    struct ItemDetails<'a> {
+        name: &'a str,
+        description: &'a str,
+        price: u32,
+        increase: u32,
+    }
+
+    impl fmt::Display for ItemDetails<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "{}          Price:${}\n({})\n\n\n",
+                self.name, self.price, self.description
+            )
+        }
+    }
+
+    fn merchant_selection(player: &mut PlayerInfo) {
         clear_console();
 
         println!("Welcome stranger! \n");
         println!("Your balance is {}", player.money);
 
         // let health_items = vec![""]
-        let store_items = vec!["Health", "Firepower", "Defence", "Exit"];
+        let store_items = vec!["Health", "Firepower", "Crit Chance", "Exit"];
 
         let selection = Select::with_theme(&ColorfulTheme::default())
             .items(&store_items)
@@ -160,7 +160,7 @@ fn main() -> std::io::Result<()> {
                     } else if index == 1 {
                         fire_power_items(player);
                     } else if index == 2 {
-                        defence_items(player);
+                        crit_chance_items(player);
                     } else if index == 3 {
                         clear_console();
                         start_selection(player);
@@ -168,11 +168,12 @@ fn main() -> std::io::Result<()> {
                 }
                 None => {
                     clear_console();
+                    start_selection(player);
                 }
             },
 
             Err(err) => {
-                eprintln!("Error in merchant items. {}", err)
+                eprintln!("Error in merchant_selection items. {}", err)
             }
         }
     }
@@ -184,28 +185,22 @@ fn main() -> std::io::Result<()> {
 
         let health_items_vec = vec![
             ItemDetails {
-                name: "HP Upgrade 1",
+                name: "Health Upgrade 1",
                 description: "Increase your health by 100 points",
-                is_available: true,
-                unlock_requirement: "",
-                is_bought: false,
                 price: 100,
+                increase: 100,
             },
             ItemDetails {
-                name: "HP Upgrade 2",
+                name: "Health Upgrade 2",
                 description: "Increase your health by 200 points",
-                is_available: false,
-                unlock_requirement: "You need to get to the third boss",
-                is_bought: false,
-                price: 100,
+                price: 150,
+                increase: 200,
             },
             ItemDetails {
-                name: "HP Upgrade 3",
-                description: "Increase your health by 200 points",
-                is_available: false,
-                unlock_requirement: "You need to get to the fourth boss",
-                is_bought: false,
+                name: "Health Upgrade 3",
+                description: "Increase your health by 500 points",
                 price: 300,
+                increase: 500,
             },
         ];
 
@@ -217,44 +212,26 @@ fn main() -> std::io::Result<()> {
         match health_selection {
             Ok(opt) => match opt {
                 Some(index) => {
-                    if index == 0 {
-                        if health_items_vec[1].is_available {
-                            let old_health = player.health;
-                            player.health += 100;
-                            player.money -= health_items_vec[1].price;
-
-                            println!(
-                                "You upgraded your health from {} to {} for ${}",
-                                old_health, player.health, health_items_vec[1].price
-                            );
-                        } else {
-                            println!(
-                                "Item is not available, {}",
-                                health_items_vec[1].unlock_requirement
-                            );
-                        }
-
-                        thread::sleep(Duration::from_millis(500));
+                    if player.money < health_items_vec[index].price {
+                        println!("Not enought cash, stranger!");
+                        thread::sleep(Duration::from_millis(3000));
                         health_items(player);
-                    } else if index == 1 {
-                        if health_items_vec[1].is_available {
-                        } else {
-                            println!("Returning...\n");
-                            println!(
-                                "Item is not available, {}",
-                                health_items_vec[1].unlock_requirement
-                            );
-                        }
+                    };
 
-                        thread::sleep(Duration::from_millis(4500));
-                        health_items(player);
-                        println!("Firepower");
-                    } else {
-                        merchant(player);
-                    }
+                    let old_health = player.health;
+                    player.health += health_items_vec[index].increase;
+                    player.money -= health_items_vec[index].price;
+
+                    println!(
+                        "You upgraded your health from {} to {} for ${}",
+                        old_health, player.health, health_items_vec[index].price
+                    );
+
+                    thread::sleep(Duration::from_millis(3000));
+                    health_items(player);
                 }
                 None => {
-                    merchant(player);
+                    merchant_selection(player);
                 }
             },
             Err(err) => {
@@ -268,79 +245,64 @@ fn main() -> std::io::Result<()> {
         println!("Health Items \n");
         println!("Press {} to ruturn \n", String::from("esc"));
 
-        let health_items_vec = vec![
+        let damage_items_vec = vec![
             ItemDetails {
-                name: "HP Upgrade 1",
-                description: "Increase your health by 100 points",
-                is_available: true,
-                unlock_requirement: "",
-                is_bought: false,
-                price: 100,
+                name: "Damage Upgrade 1",
+                description: "Increases your min and max Damage by 10 points",
+                price: 200,
+                increase: 10,
             },
             ItemDetails {
-                name: "HP Upgrade 2",
-                description: "Increase your health by 200 points",
-                is_available: false,
-                unlock_requirement: "You need to get to the third boss",
-                is_bought: false,
-                price: 100,
-            },
-            ItemDetails {
-                name: "HP Upgrade 3",
-                description: "Increase your health by 200 points",
-                is_available: false,
-                unlock_requirement: "You need to get to the fourth boss",
-                is_bought: false,
+                name: "Damage Upgrade 2",
+                description: "Increases your min and max Damage by 15 points",
                 price: 300,
+                increase: 15,
+            },
+            ItemDetails {
+                name: "Damage Upgrade 3",
+                description: "Increases your min and max Damage by 25 points",
+                price: 500,
+                increase: 25,
             },
         ];
 
-        let health_selection = Select::with_theme(&ColorfulTheme::default())
-            .items(&health_items_vec)
+        let damage_selection = Select::with_theme(&ColorfulTheme::default())
+            .items(&damage_items_vec)
             .default(0)
             .interact_on_opt(&Term::stderr());
 
-        match health_selection {
+        match damage_selection {
             Ok(opt) => match opt {
                 Some(index) => {
-                    if index == 0 {
-                        if health_items_vec[1].is_available {
-                            let old_health = player.health;
-                            player.health += 100;
-                            player.money -= health_items_vec[1].price;
+                    if player.money < damage_items_vec[index].price {
+                        println!("Not enought cash, stranger!");
+                        thread::sleep(Duration::from_millis(3000));
 
-                            println!(
-                                "You upgraded your health from {} to {} for ${}",
-                                old_health, player.health, health_items_vec[1].price
-                            );
-                        } else {
-                            println!(
-                                "Item is not available, {}",
-                                health_items_vec[1].unlock_requirement
-                            );
-                        }
-
-                        thread::sleep(Duration::from_millis(500));
                         health_items(player);
-                    } else if index == 1 {
-                        if health_items_vec[1].is_available {
-                        } else {
-                            println!("Returning...\n");
-                            println!(
-                                "Item is not available, {}",
-                                health_items_vec[1].unlock_requirement
-                            );
-                        }
+                    };
 
-                        thread::sleep(Duration::from_millis(4500));
-                        health_items(player);
-                        println!("Firepower");
-                    } else {
-                        merchant(player);
-                    }
+                    let old_min = player.min_hit;
+                    let old_max = player.max_hit;
+                    player.min_hit += damage_items_vec[index].increase;
+                    player.max_hit += damage_items_vec[index].increase;
+
+                    player.money -= damage_items_vec[index].price;
+
+                    println!(
+                        "You upgraded your damage from {}-{} to {}-{} for ${}",
+                        old_min,
+                        old_max,
+                        player.min_hit,
+                        player.max_hit,
+                        damage_items_vec[index].price
+                    );
+
+                    thread::sleep(Duration::from_millis(3000));
+
+                    fire_power_items(player);
                 }
                 None => {
-                    merchant(player);
+                    merchant_selection(player);
                 }
             },
             Err(err) => {
@@ -349,84 +311,69 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    fn defence_items(player: &mut PlayerInfo) {
+    fn crit_chance_items(player: &mut PlayerInfo) {
         clear_console();
-        println!("Health Items \n");
+        println!("Crit chance Boosters");
+        println!("Can go up to a maximum of 40% crit chance \n");
         println!("Press {} to ruturn \n", String::from("esc"));
 
-        let health_items_vec = vec![
+        let crit_chance_items_vec = vec![
             ItemDetails {
-                name: "HP Upgrade 1",
-                description: "Increase your health by 100 points",
-                is_available: true,
-                unlock_requirement: "",
-                is_bought: false,
-                price: 100,
+                name: "Crit Chance Upgrade 1",
+                description: "Increases your crit chance by 2%",
+                price: 500,
+                increase: 2,
             },
             ItemDetails {
-                name: "HP Upgrade 2",
-                description: "Increase your health by 200 points",
-                is_available: false,
-                unlock_requirement: "You need to get to the third boss",
-                is_bought: false,
-                price: 100,
+                name: "Crit Chance Upgrade 2",
+                description: "Increases your crit chance by 4%",
+                price: 800,
+                increase: 4,
             },
             ItemDetails {
-                name: "HP Upgrade 3",
-                description: "Increase your health by 200 points",
-                is_available: false,
-                unlock_requirement: "You need to get to the fourth boss",
-                is_bought: false,
-                price: 300,
+                name: "Crit Chance Upgrade 3",
+                description: "Increases your crit chance by 7%",
+                price: 1500,
+                increase: 7,
             },
         ];
 
-        let health_selection = Select::with_theme(&ColorfulTheme::default())
-            .items(&health_items_vec)
+        let crit_chance_selection = Select::with_theme(&ColorfulTheme::default())
+            .items(&crit_chance_items_vec)
             .default(0)
             .interact_on_opt(&Term::stderr());
 
-        match health_selection {
+        match crit_chance_selection {
             Ok(opt) => match opt {
                 Some(index) => {
-                    if index == 0 {
-                        if health_items_vec[1].is_available {
-                            let old_health = player.health;
-                            player.health += 100;
-                            player.money -= health_items_vec[1].price;
+                    if player.money < crit_chance_items_vec[index].price {
+                        println!("Not enought cash, stranger!");
+                        thread::sleep(Duration::from_millis(3000));
 
-                            println!(
-                                "You upgraded your health from {} to {} for ${}",
-                                old_health, player.health, health_items_vec[1].price
-                            );
-                        } else {
-                            println!(
-                                "Item is not available, {}",
-                                health_items_vec[1].unlock_requirement
-                            );
-                        }
-
-                        thread::sleep(Duration::from_millis(500));
                         health_items(player);
-                    } else if index == 1 {
-                        if health_items_vec[1].is_available {
-                        } else {
-                            println!("Returning...\n");
-                            println!(
-                                "Item is not available, {}",
-                                health_items_vec[1].unlock_requirement
-                            );
-                        }
+                    };
 
-                        thread::sleep(Duration::from_millis(4500));
-                        health_items(player);
-                        println!("Firepower");
-                    } else {
-                        merchant(player);
+                    let old_crit_chance = player.crit_chance;
+                    player.crit_chance += crit_chance_items_vec[index].increase;
+
+                    // Crit cahnce cap
+                    if player.crit_chance > 40 {
+                        player.crit_chance = 40
                     }
+
+                    player.money -= crit_chance_items_vec[index].price;
+
+                    println!(
+                        "You upgraded your crit chance from {} to {} for ${}",
+                        old_crit_chance, player.crit_chance, crit_chance_items_vec[index].price
+                    );
+
+                    thread::sleep(Duration::from_millis(3000));
+
+                    crit_chance_items(player);
                 }
                 None => {
-                    merchant(player);
+                    merchant_selection(player);
                 }
             },
             Err(err) => {
@@ -446,7 +393,6 @@ fn main() -> std::io::Result<()> {
         let delay = time::Duration::from_secs(2);
 
         // Helpers
-        let mut current_boss = player.current_boss;
         let mut players_health = player.health;
         let mut boss_health = boss_array[player.current_boss as usize].health; // not safe?
 
@@ -464,7 +410,7 @@ fn main() -> std::io::Result<()> {
             thread::sleep(set_delay(1000));
 
             let player_hit_damage = player.hit();
-            let boss_hit_damage = boss_array[current_boss as usize].hit();
+            let boss_hit_damage = boss_array[player.current_boss as usize].hit();
 
             let boss_reward: u32 = boss_array[player.current_boss as usize].reward;
 
@@ -476,8 +422,9 @@ fn main() -> std::io::Result<()> {
             println!("Player hit: {player_hit_damage}");
             thread::sleep(set_delay(500));
 
-            if boss_array[current_boss as usize].has_defended() {
-                println!("Boss defended a {} hit \n", player_hit_damage);
+            if boss_array[player.current_boss as usize].has_defended() {
+                player_hit_counter += 1;
+                println!("Boss defended!\n");
                 thread::sleep(delay);
 
                 if players_health > boss_hit_damage {
@@ -490,8 +437,13 @@ fn main() -> std::io::Result<()> {
                     thread::sleep(delay);
                 } else {
                     break {
-                        current_boss = 0; // If the play dies, it goes back to the first boss;
-                        println!("Player is now dead! Killed with {} hits", boss_hit_counter);
+                        boss_hit_counter += 1;
+                        player.current_boss = 0; // If the play dies, it goes back to the first boss;
+                        player.deaths += 1;
+                        println!(
+                            "\n \nPlayer is now dead! Killed with {} hits",
+                            boss_hit_counter
+                        );
                         println!("Back to the start! \n",);
 
                         thread::sleep(set_delay(3000));
@@ -510,7 +462,7 @@ fn main() -> std::io::Result<()> {
                                         start_new_battle(player)
                                     } else if val == 1 {
                                         clear_console();
-                                        merchant(player)
+                                        merchant_selection(player)
                                     } else {
                                         clear_console();
                                         start_selection(player)
@@ -540,13 +492,16 @@ fn main() -> std::io::Result<()> {
                     } else {
                         break {
                             println!("Boss hit {boss_hit_damage}hp");
+                            boss_hit_counter += 1;
                             thread::sleep(set_delay(500));
-                            current_boss = 0; // If the play dies, it goes back to the first boss;
+                            player.current_boss = 0; // If the play dies, it goes back to the first boss;
+                            player.deaths += 1;
+
                             println!(
-                                "Player is now dead! Killed with {} hits \n",
+                                "\n \nPlayer is now dead! Killed with {} hits",
                                 boss_hit_counter
                             );
-                            println!("Back to the start!",);
+                            println!("Back to the start! \n",);
 
                             thread::sleep(set_delay(3000));
                             let options = vec!["Next Battle", "Vendor", "Exit"];
@@ -564,7 +519,7 @@ fn main() -> std::io::Result<()> {
                                             start_new_battle(player)
                                         } else if val == 1 {
                                             clear_console();
-                                            merchant(player)
+                                            merchant_selection(player)
                                         } else {
                                             clear_console();
                                             start_selection(player)
@@ -578,19 +533,20 @@ fn main() -> std::io::Result<()> {
                     }
                 } else {
                     // Boss death
+                    player_hit_counter += 1;
                     player.money += boss_reward;
                     player.money_earned += boss_reward;
                     player.current_boss += 1;
 
                     println!(
-                        "Boss is now dead! Killed with {} hits. Player balance is now {:.2} \n",
+                        "\n \nBoss is now dead! Killed with {} hits. Player balance is now {:.2}",
                         player_hit_counter, player.money
                     );
 
                     thread::sleep(set_delay(300));
 
                     println!(
-                        "Next boss is now {}.",
+                        "Next boss is now {}. \n",
                         boss_array[player.current_boss as usize].name
                     );
 
@@ -608,12 +564,13 @@ fn main() -> std::io::Result<()> {
                                     start_new_battle(player)
                                 } else if val == 1 {
                                     clear_console();
-                                    merchant(player)
+                                    merchant_selection(player)
                                 } else {
                                     clear_console();
+                                    start_selection(player)
                                 }
                             }
-                            None => {}
+                            None => start_selection(player),
                         },
                         Err(err) => eprintln!("Erro {err:?}"),
                     }

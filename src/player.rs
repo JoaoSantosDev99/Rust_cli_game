@@ -1,7 +1,4 @@
-use crate::bosses::boss_registry;
-use rand::Rng;
-
-pub mod Player {
+pub mod player {
     use rand::Rng;
 
     use crate::bosses::boss_registry;

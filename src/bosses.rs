@@ -12,15 +12,13 @@ pub mod boss_registry {
         pub reward: u32,
     }
 
-    impl Boss<'_> {}
-
     pub const FIRST_BOSS: Boss = Boss {
         name: "Jesse James",
         health: 100,
         min_hit: 5,
         max_hit: 25,
         def_chance: 20,
-        reward: 10000,
+        reward: 1000,
     };
 
     pub const SECOND_BOSS: Boss = Boss {
@@ -29,7 +27,7 @@ pub mod boss_registry {
         min_hit: 20,
         max_hit: 150,
         def_chance: 5,
-        reward: 48000,
+        reward: 2100,
     };
 
     pub const THIRD_BOSS: Boss = Boss {
@@ -37,8 +35,8 @@ pub mod boss_registry {
         health: 600,
         min_hit: 60,
         max_hit: 260,
-        def_chance: 30,
-        reward: 97000,
+        def_chance: 40,
+        reward: 100000,
     };
 
     pub const ALL_BOSSES: [Boss; 3] = [FIRST_BOSS, SECOND_BOSS, THIRD_BOSS];
@@ -74,7 +72,6 @@ pub mod boss_registry {
 pub mod boss_display {
 
     use super::boss_registry;
-    use crate::PlayerInfo;
     use dialoguer::{console::Term, theme::ColorfulTheme, Select};
     use std::{thread, time::Duration};
 
@@ -105,7 +102,7 @@ pub mod boss_display {
                 Some(index) => {
                     println!("Returning in 10s \n");
                     println!("{}", bosses[index]);
-                    thread::sleep(Duration::from_secs(2));
+                    thread::sleep(Duration::from_secs(10));
                     clear_console();
                     display_list()
                 }
